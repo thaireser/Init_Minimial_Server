@@ -13,6 +13,11 @@ from colorama import Fore, Style
 start_ip = f"192.168.56.101"
 silence_mode = False
 output = "undef"
+ipaddressesfile = "undef" 
+hostnamesfile = "undef"
+requirementsfile = "undef"
+proposed_ip = "undef"
+proposed_hostname = "undef"
 
 #PARAMETER
 def main():
@@ -24,14 +29,14 @@ def main():
     args = parser.parse_args()
 
     if args.silent:
-        # Konfiguration des Logging-Moduls
-        log_format = '%(asctime)s - %(levelname)s - %(message)s'
-        logging.basicConfig(filename='logfile.log', level=logging.INFO, format=log_format)
-        # Umleitung von stdout und stderr
-        #sys.stdout = open('logfile.log', 'a')
-        #sys.stderr = open('logfile.log', 'a')
         global silence_mode
         silence_mode = True
+        # Konfiguration des Logging-Moduls
+        log_format = '%(asctime)s - %(levelname)s - %(message)s'
+        logging.basicConfig(filename='init_minimal_server_00.log', level=logging.INFO, format=log_format)
+        # Umleitung von stdout und stderr
+        sys.stdout = logging.StreamHandler()
+        sys.stderr = logging.StreamHandler()
 
     if args.automatic:
         search_ip_list()
