@@ -4,9 +4,6 @@
 import argparse
 import logging
 import os
-import re
-import socket
-import struct
 import subprocess
 import sys
 from colorama import Fore, Style
