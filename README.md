@@ -13,3 +13,4 @@ The script can be:
 LIMITS
 - The script must be executed as root. 
 - The script should not be executed in a shared Windows folder, as a Python environment cannot be set up there.
+- There is no proper error handling! Use carefully :)
