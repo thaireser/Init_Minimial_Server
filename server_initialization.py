@@ -88,9 +88,9 @@ def increment_ip(ip):
 
 def install_requirements(requirements):
     log('Creating a virtual environment...')
-    run_command([f"python3 -m venv venv"])
+    exec_command([f"python3 -m venv venv"])
     log('Installing packages...')
-    run_command([f"pip install -r {requirements}"])
+    exec_command([f"pip install -r {requirements}"])
 
 def is_ping_successful(ip):
     try:
@@ -117,7 +117,7 @@ def parse_arguments():
     parser.add_argument('-a', '--automatic', action='store_true', help='Automatic IP and hostname configuration.')
     return parser.parse_args()
 
-def run_command(command):
+def exec_command(command):
     try:
         result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                   universal_newlines=True)
@@ -145,7 +145,7 @@ def get_directory_containing_file(file):
         log(f"...not found: {path}")
     log(f"...not ok: NO LIST WAS FOUND. PROCEEDING WITH LUCK." , "RED")
     log(f"Creating file {paths[1]}..." , "YELLOW")
-    run_command(f"touch {paths[1]}")
+    exec_command(f"touch {paths[1]}")
     return paths[1]
 
 def search_term_in_file(file, search_term):
@@ -157,12 +157,12 @@ def search_term_in_file(file, search_term):
 
 def set_hostname(hostname):
     log(f"SETTING HOSTNAME TO {hostname}..." , "YELLOW")
-    run_command([f"hostnamectl set-hostname {hostname}"])
+    exec_command([f"hostnamectl set-hostname {hostname}"])
 
 def set_ip(ip):
     log(f"SETTING IP TO {ip}... " , "YELLOW")
     log(f'Trying to run:ip addr add {ip}/24 dev eth1')
-    run_command([f'ip addr add {ip}/24 dev eth1'])
+    exec_command([f'ip addr add {ip}/24 dev eth1'])
 
 def main():
     args = parse_arguments()
