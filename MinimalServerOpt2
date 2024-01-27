@@ -86,9 +86,26 @@ def increment_ip(ip):
     ip_parts[-1] = str(last_octet)
     return '.'.join(ip_parts)
 
+def install_pip():
+    distro = distro.name()
+    if 'centos' in distro or 'oracle' in distro or 'amazon' in distro:
+        # CentOS, Oracle Linux, Amazon Linux
+        subprocess.run(["sudo", "yum", "install", "-y", "python-pip"], check=True)
+    elif 'ubuntu' in distro or 'kali' in distro:
+        # Ubuntu, Kali Linux
+        subprocess.run(["sudo", "apt", "install", "-y", "python3-pip"], check=True)
+    elif 'fedora' in distro:
+        # Fedora
+        subprocess.run(["sudo", "dnf", "install", "-y", "python3-pip"], check=True)
+    elif 'opensuse' in distro:
+        # OpenSuse
+        subprocess.run(["sudo", "zypper", "install", "-y", "python3-pip"], check=True)
+    else:
+        raise Exception("Unsupported Linux distribution")
+
 def install_requirements(requirements):
-    log('Creating a virtual environment...')
-    exec_command([f"python3 -m venv venv"])
+    #log('Creating a virtual environment...')
+    #exec_command([f"python3 -m venv venv"])
     log('Installing packages...')
     exec_command([f"pip install -r {requirements}"])
 
@@ -125,28 +142,30 @@ def exec_command(command):
     except subprocess.CalledProcessError as e:
         log(f"...not ok: {e.stderr.strip()}", "RED")
 
-def getting_paths(file):
-    shared_dir_command = "df -h | grep Desktop | awk '{print $6}'"
-    current_dir_command = "pwd"
-    tmp_dir = "/tmp"
-    shared_dir = subprocess.check_output(shared_dir_command, shell=True, universal_newlines=True).strip()
-    current_dir = subprocess.check_output(current_dir_command, shell=True, universal_newlines=True).strip()
-    directories = [shared_dir, current_dir, tmp_dir]
-    paths = [str(directory) + f"/{file}" for directory in directories]
+def get_paths(file):
+    shared_dir_cmd = "df -h | grep shared | awk '{print $6}'"
+    current_dir_cmd = "pwd"
+    shared_dir = subprocess.check_output(shared_dir_cmd, shell=True, universal_newlines=True).strip()
+    current_dir = subprocess.check_output(current_dir_cmd, shell=True, universal_newlines=True).strip()
+    paths = {
+        "shared_dir": shared_dir + f"/{file}",
+        "current_dir": current_dir + f"/{file}",
+        "tmp_dir": "/tmp" + f"/{file}"
+    }
     return paths 
 
-def get_directory_containing_file(file):
-    paths = getting_paths(file)
+def get_dir_containing_file(file):
+    paths = get_paths(file)
     log(f'Searching for file {file}...')
     for path in paths:
-        if is_path_existing(path):
-            log(f"...ok: {path} found.", "GREEN")
-            return path
-        log(f"...not found: {path}")
-    log(f"...not ok: NO LIST WAS FOUND. PROCEEDING WITH LUCK." , "RED")
-    log(f"Creating file {paths[1]}..." , "YELLOW")
-    exec_command(f"touch {paths[1]}")
-    return paths[1]
+        if is_path_existing(paths[path]):
+            log(f"...ok: {paths[path]} found.", "GREEN")
+            return paths[path]
+        log(f"...not found: {paths[path]}")
+    log(f'...not ok: NO LIST WAS FOUND. PROCEEDING WITH LUCK.' , "RED")
+    log(f'Creating file {paths["current_dir"]}...' , "YELLOW")
+    exec_command(f'touch {paths["current_dir"]}')
+    return paths["current_dir"]
 
 def search_term_in_file(file, search_term):
     with open(file, 'r') as file:
@@ -164,10 +183,14 @@ def set_ip(ip):
     log(f'Trying to run:ip addr add {ip}/24 dev eth1')
     exec_command([f'ip addr add {ip}/24 dev eth1'])
 
+def prepare_execution():
+    install_pip()
+    
 def main():
     args = parse_arguments()
     if args.silent:
         configure_log()  
+    prepare_execution()
     requirements = get_requirements(args)
     install_requirements(requirements)
     ip = get_ip(args)
