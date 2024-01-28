@@ -86,23 +86,6 @@ def increment_ip(ip):
     ip_parts[-1] = str(last_octet)
     return '.'.join(ip_parts)
 
-def install_pip():
-    distro = distro.name()
-    if 'centos' in distro or 'oracle' in distro or 'amazon' in distro:
-        # CentOS, Oracle Linux, Amazon Linux
-        subprocess.run(["sudo", "yum", "install", "-y", "python-pip"], check=True)
-    elif 'ubuntu' in distro or 'kali' in distro:
-        # Ubuntu, Kali Linux
-        subprocess.run(["sudo", "apt", "install", "-y", "python3-pip"], check=True)
-    elif 'fedora' in distro:
-        # Fedora
-        subprocess.run(["sudo", "dnf", "install", "-y", "python3-pip"], check=True)
-    elif 'opensuse' in distro:
-        # OpenSuse
-        subprocess.run(["sudo", "zypper", "install", "-y", "python3-pip"], check=True)
-    else:
-        raise Exception("Unsupported Linux distribution")
-
 def install_requirements(requirements):
     #log('Creating a virtual environment...')
     #exec_command([f"python3 -m venv venv"])
@@ -183,20 +166,34 @@ def set_ip(ip):
     log(f'Trying to run:ip addr add {ip}/24 dev eth1')
     exec_command([f'ip addr add {ip}/24 dev eth1'])
 
+def install_packages(packages, package_manager):
+    install_command = [package_manager, 'install', '-y'] + packages
+    subprocess.run(install_command, check=True)
+
 def prepare_execution():
-    install_pip()
-    
+    distro = os.popen('cat /etc/os-release').read()
+    if 'centos' in distro or 'fedora' in distro or 'oracle' in distro or 'amazon' in distro:
+        package_manager = 'yum' if 'centos' in distro or 'oracle' in distro or 'amazon' in distro else 'dnf'
+    elif 'ubuntu' in distro or 'debian' in distro or 'kali' in distro:
+        package_manager = 'apt-get'
+    elif 'suse' in distro:
+        package_manager = 'zypper'
+    else:
+        raise Exception("Nicht unterstützte Linux-Distribution")
+    packages = ['python3-pip', 'python3-venv', 'dkms', 'build-essential', f'linux-headers-{os.uname().release}']
+    install_packages(packages, package_manager)
+
 def main():
     args = parse_arguments()
     if args.silent:
         configure_log()  
     prepare_execution()
-    requirements = get_requirements(args)
-    install_requirements(requirements)
-    ip = get_ip(args)
-    set_ip(ip)
-    hostname = get_hostname(args)
-    set_hostname(hostname)
+    #requirements = get_requirements(args)
+    #install_requirements(requirements)
+    #ip = get_ip(args)
+    #set_ip(ip)
+    #hostname = get_hostname(args)
+    #set_hostname(hostname)
 
 if __name__=='__main__':
     main()
