@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+# -*- coding: utf8 -*-
+
+import subprocess
+import os
+
+def install_packages(packages, package_manager):
+    install_cmd = [package_manager, 'install', '-y'] + packages
+    subprocess.run(install_cmd, shell=False, check=True)
+
+def groupinstall_packages(packages, package_manager):
+    install_cmd = [package_manager, 'groupinstall', '-y'] + packages
+    subprocess.run(install_cmd, shell=False, check=True)
+
+def get_updates(update_cmd):
+    subprocess.run(update_cmd, shell=False, check=True)
+
+def prepare_execution():
+    distro = os.popen('cat /etc/os-release').read()
+    if 'centos' in distro or 'oracle' in distro or 'amazon' in distro:
+        package_manager = 'yum'
+        packages = ['python3-pip', 'kernel-devel']
+        group_packages = ["Development Tools"]
+        update_cmd = [package_manager, '--assumeyes', 'upgrade']
+    elif 'fedora' in distro:
+        package_manager = 'dnf'
+        packages = ['python3-pip', 'python3-virtualenv', 'dkms']
+        update_cmd = f"{package_manager} -y upgrade"
+    elif 'ubuntu' in distro or 'debian' in distro or 'kali' in distro:
+        package_manager = 'apt-get'
+        packages = ['python3-pip', 'python3-venv', 'dkms', 'build-essential', f'linux-headers-{os.uname().release}']
+        update_cmd = f"{package_manager} update && {package_manager} -y upgrade"
+    elif 'suse' in distro:
+        package_manager = 'zypper'
+        packages = ['python3-pip', 'python3-venv', 'dkms', 'build-essential', f'linux-headers-{os.uname().release}']
+        update_cmd = f"{package_manager} refresh && {package_manager} update"
+    else:
+        raise Exception("Nicht unterstützte Linux-Distribution")
+    get_updates(update_cmd)
+    install_packages(packages, package_manager)
+    if group_packages is not None:
+        groupinstall_packages(group_packages, package_manager)
+
+def main():
+    prepare_execution()
+
+if __name__=='__main__':
+    main()
