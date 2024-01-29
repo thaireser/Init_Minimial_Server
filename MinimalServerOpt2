@@ -7,6 +7,18 @@ import logging
 import os
 import subprocess
 import sys
+#If not already installed, install pip & colorama before importing
+try:
+    import pip
+except ImportError:
+    #Already parse arguments to prevent getting output during silent mode
+    args = parse_arguments()
+    subprocess.check_call([sys.executable, '-m', 'ensurepip'])
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--upgrade', 'pip'])
+try:
+    import colorama
+except ImportError:
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'colorama'])
 from colorama import Fore, Style
 
 is_silent = False
@@ -30,11 +42,10 @@ def log(output, color=None):
 
 def determine_hostname(hostnames_file):
     counter = 1
-    hostname = (f"{distro.linux_distribution()[0]}-{distro.linux_distribution()[1]}-{counter}").replace(" ", "-")
+    hostname = (f"{distro.id()}-{distro.version()}-{counter}").replace(" ", "-")
     while search_term_in_file(hostnames_file, hostname):
         counter += 1
-        hostname = (f"{distro.linux_distribution()[0]}-{distro.linux_distribution()[1]}-{counter}").replace(" ", "-")
-        #search_term_in_file(hostnames_file, hostname)
+        hostname = (f"{distro.id()}-{distro.version()}-{counter}").replace(" ", "-")
     add_content_to_file(hostnames_file, hostname)
     return hostname
 
@@ -58,7 +69,7 @@ def get_requirements(args):
         log('Reading path to requirements from console...')
         requirements = input('Please enter the full path to a file that contains the requirements: ')
         return requirements
-    requirements = get_directory_containing_file("requirements.txt")
+    requirements = get_dir_containing_file("requirements.txt")
     return requirements
 
 def get_hostname(args):
@@ -66,7 +77,7 @@ def get_hostname(args):
         log('Reading hostname from console...')
         hostname = input('Please enter hostname: ')
         return hostname
-    hosts_list = get_directory_containing_file("hostnames")
+    hosts_list = get_dir_containing_file("hostnames")
     hostname = determine_hostname(hosts_list)
     return hostname
 
@@ -75,7 +86,7 @@ def get_ip(args):
         log('Reading IP from console...')
         ip = input('Please enter IP: ')
         return ip
-    ip_adresses_file = get_directory_containing_file("ip_adresses")
+    ip_adresses_file = get_dir_containing_file("ip_adresses")
     ip = determine_ip(ip_adresses_file)
     return ip
 
@@ -87,10 +98,14 @@ def increment_ip(ip):
     return '.'.join(ip_parts)
 
 def install_requirements(requirements):
-    #log('Creating a virtual environment...')
-    #exec_command([f"python3 -m venv venv"])
+    log('Creating a virtual environment "venv"...')
+    exec_cmd([f"python3 -m venv venv"])
+    log('Activing virtual environment "venv"...')
+    current_dir_cmd = "pwd"
+    current_dir = subprocess.check_output(current_dir_cmd, shell=True, universal_newlines=True).strip()
+    exec_cmd([f"source {current_dir}/venv/bin/activate"])
     log('Installing packages...')
-    exec_command([f"pip install -r {requirements}"])
+    exec_cmd([f"pip install -r {requirements}"])
 
 def is_ping_successful(ip):
     try:
@@ -117,9 +132,9 @@ def parse_arguments():
     parser.add_argument('-a', '--automatic', action='store_true', help='Automatic IP and hostname configuration.')
     return parser.parse_args()
 
-def exec_command(command):
+def exec_cmd(cmd):
     try:
-        result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        result = subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                   universal_newlines=True)
         log(f"...ok.", "GREEN")
     except subprocess.CalledProcessError as e:
@@ -135,7 +150,7 @@ def get_paths(file):
         "current_dir": current_dir + f"/{file}",
         "tmp_dir": "/tmp" + f"/{file}"
     }
-    return paths 
+    return paths
 
 def get_dir_containing_file(file):
     paths = get_paths(file)
@@ -145,9 +160,9 @@ def get_dir_containing_file(file):
             log(f"...ok: {paths[path]} found.", "GREEN")
             return paths[path]
         log(f"...not found: {paths[path]}")
-    log(f'...not ok: NO LIST WAS FOUND. PROCEEDING WITH LUCK.' , "RED")
+    log(f'...not ok: No file was found.' , "RED")
     log(f'Creating file {paths["current_dir"]}...' , "YELLOW")
-    exec_command(f'touch {paths["current_dir"]}')
+    exec_cmd(f'touch {paths["current_dir"]}')
     return paths["current_dir"]
 
 def search_term_in_file(file, search_term):
@@ -158,42 +173,53 @@ def search_term_in_file(file, search_term):
         return False
 
 def set_hostname(hostname):
-    log(f"SETTING HOSTNAME TO {hostname}..." , "YELLOW")
-    exec_command([f"hostnamectl set-hostname {hostname}"])
+    log(f"Setting hostname to {hostname}..." , "YELLOW")
+    exec_cmd([f"hostnamectl set-hostname {hostname}"])
 
 def set_ip(ip):
-    log(f"SETTING IP TO {ip}... " , "YELLOW")
-    log(f'Trying to run:ip addr add {ip}/24 dev eth1')
-    exec_command([f'ip addr add {ip}/24 dev eth1'])
+    log(f"Setting ip to {ip}... " , "YELLOW")
+    log(f'Trying to run: ip addr add {ip}/24 dev eth1')
+    exec_cmd([f'ip addr add {ip}/24 dev eth1'])
 
 def install_packages(packages, package_manager):
-    install_command = [package_manager, 'install', '-y'] + packages
-    subprocess.run(install_command, check=True)
+    install_cmd = [package_manager, 'install', '-y'] + packages
+    log(f"Installiere Pakete, die zur Ausführung des Skripts benötigt werden...")
+    try:
+        result = subprocess.run(install_cmd, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        #TO DO: Output still has "[" and "]" around the packages. 
+        log(f"...ok: Die Pakete {packages} sind erfolgreich installiert.", "GREEN")
+    except subprocess.CalledProcessError as e:
+        log(f"...not ok: {e.stderr.strip()}", "RED")
 
 def prepare_execution():
     distro = os.popen('cat /etc/os-release').read()
-    if 'centos' in distro or 'fedora' in distro or 'oracle' in distro or 'amazon' in distro:
-        package_manager = 'yum' if 'centos' in distro or 'oracle' in distro or 'amazon' in distro else 'dnf'
+    if 'centos' in distro or 'oracle' in distro or 'amazon' in distro:
+        package_manager = 'yum'
+        packages = ['python3-pip', 'python3-venv', 'dkms', 'build-essential', f'linux-headers-{os.uname().release}']
+    elif 'fedora' in distro:
+        package_manager = 'dnf'
+        packages = ['python3-pip', 'python3-virtualenv', 'dkms']
     elif 'ubuntu' in distro or 'debian' in distro or 'kali' in distro:
         package_manager = 'apt-get'
+        packages = ['python3-pip', 'python3-venv', 'dkms', 'build-essential', f'linux-headers-{os.uname().release}']
     elif 'suse' in distro:
         package_manager = 'zypper'
+        packages = ['python3-pip', 'python3-venv', 'dkms', 'build-essential', f'linux-headers-{os.uname().release}']
     else:
         raise Exception("Nicht unterstützte Linux-Distribution")
-    packages = ['python3-pip', 'python3-venv', 'dkms', 'build-essential', f'linux-headers-{os.uname().release}']
     install_packages(packages, package_manager)
 
 def main():
     args = parse_arguments()
     if args.silent:
-        configure_log()  
+        configure_log()
     prepare_execution()
-    #requirements = get_requirements(args)
-    #install_requirements(requirements)
+    requirements = get_requirements(args)
+    install_requirements(requirements)
+    hostname = get_hostname(args)
+    set_hostname(hostname)
     #ip = get_ip(args)
     #set_ip(ip)
-    #hostname = get_hostname(args)
-    #set_hostname(hostname)
 
 if __name__=='__main__':
     main()
