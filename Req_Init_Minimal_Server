@@ -9,13 +9,14 @@ def install_packages(packages, package_manager):
     subprocess.run(install_cmd, shell=False, check=True)
 
 def groupinstall_packages(packages, package_manager):
-    install_cmd = [package_manager, 'groupinstall', '-y'] + packages
+    install_cmd = [package_manager, 'groupinstall', '-y', packages]
     subprocess.run(install_cmd, shell=False, check=True)
 
 def get_updates(update_cmd):
     subprocess.run(update_cmd, shell=False, check=True)
 
 def prepare_execution():
+    group_packages = None
     distro = os.popen('cat /etc/os-release').read()
     if 'centos' in distro or 'oracle' in distro or 'amazon' in distro:
         package_manager = 'yum'
