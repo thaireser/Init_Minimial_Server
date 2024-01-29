@@ -25,15 +25,15 @@ def prepare_execution():
     elif 'fedora' in distro:
         package_manager = 'dnf'
         packages = ['python3-pip', 'python3-virtualenv', 'dkms']
-        update_cmd = f"{package_manager} -y upgrade"
+        update_cmd = [package_manager, '--assumeyes', 'upgrade']
     elif 'ubuntu' in distro or 'debian' in distro or 'kali' in distro:
         package_manager = 'apt-get'
         packages = ['python3-pip', 'python3-venv', 'dkms', 'build-essential', f'linux-headers-{os.uname().release}']
-        update_cmd = f"{package_manager} update && {package_manager} -y upgrade"
+        update_cmd = [package_manager, 'update', '&&', package_manager, '--assumeyes', 'upgrade']
     elif 'suse' in distro:
         package_manager = 'zypper'
         packages = ['python3-pip', 'python3-venv', 'dkms', 'build-essential', f'linux-headers-{os.uname().release}']
-        update_cmd = f"{package_manager} refresh && {package_manager} update"
+        update_cmd = [package_manager, 'refresh', '&&', package_manager, 'update']
     else:
         raise Exception("Nicht unterstützte Linux-Distribution")
     get_updates(update_cmd)
