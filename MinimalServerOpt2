@@ -93,12 +93,8 @@ def increment_ip(ip):
 def install_requirements(requirements):
     log('Creating a virtual environment "venv"...')
     exec_cmd([f"python3 -m venv venv"])
-    log('Activing virtual environment "venv"...')
-    current_dir_cmd = "pwd"
-    current_dir = subprocess.check_output(current_dir_cmd, shell=True, universal_newlines=True).strip()
-    exec_cmd([f"source {current_dir}/venv/bin/activate"])
-    log('Installing packages...')
-    exec_cmd([f"pip install -r {requirements}"])
+    venv_path = os.path.abspath('./venv/bin/python')
+    exec_cmd([venv_path, '-m', 'pip', 'install', '-r', requirements])
 
 def is_ping_successful(ip):
     try:
